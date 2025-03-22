@@ -12,6 +12,7 @@ const PDFUploadInterface = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [pdfName, setPdfName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0]; // Get the first file
@@ -19,10 +20,10 @@ const PDFUploadInterface = () => {
 
     const formData = new FormData();
     formData.append("file", file); // Append the actual file object
-  
+  const url=process.env.REACT_APP_BackendURL
     try {
       setIsLoading(true);
-      const response = await axios.post("http://127.0.0.1:8000/api/upload", formData, {
+      const response = await axios.post(`${url}/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       
@@ -60,7 +61,7 @@ const PDFUploadInterface = () => {
       id: Date.now(),
       sender: 'user',
       text: inputMessage,
-      avatar: 'S'
+      avatar: 'R'
     };
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage('');

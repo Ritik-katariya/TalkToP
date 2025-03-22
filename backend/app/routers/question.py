@@ -24,9 +24,9 @@ class AskQuestionRequest(BaseModel):
 @router.post("/ask")
 async def ask_question(request: AskQuestionRequest, db: Session = Depends(get_db)):
     # Fetch the document
-    document = db.query(Document).filter(Document.id == request.document_id).first()
-    if not document:
-        return {"error": "Document not found"}
+    # document = db.query(Document).filter(Document.id == request.document_id).first()
+    # if not document:
+    #     return {"error": "Document not found"}
     
     answer = process_question(request.question)
     return {"answer": answer}
