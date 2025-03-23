@@ -4,6 +4,7 @@ import logo from '../image/logo.png';
 import { uploadPDF } from '../api/api'; // Import actual API functions
 import { askQuestion } from '../api/api';
 import axios from "axios";
+import MessageList from './Messagelist';
 
 
 const PDFUploadInterface = () => {
@@ -135,34 +136,7 @@ const PDFUploadInterface = () => {
 
     <div className='h-full overflow-auto mb-[200px] z-10'>
         {/* Chat Container */}
-        <div className="max-w-4xl mx-auto p-4 ">
-        <div className="space-y-6">
-          {messages.map((message) => (
-            <div key={message.id} className="flex space-x-3">
-              {message.sender === 'user' ? (
-                <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center text-purple-700">
-                  {message.avatar}
-                </div>
-              ) : message.sender === 'ai' ? (
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                  <img src={logo} alt="AI Avatar" className="w-6 h-6" />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12" y2="8"></line>
-                  </svg>
-                </div>
-              )}
-              <div className="flex-1">
-                <p className="text-gray-800">{message.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+        <MessageList messages={messages}/>
 
       {/* Message Input */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
