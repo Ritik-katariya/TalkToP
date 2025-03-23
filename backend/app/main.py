@@ -32,9 +32,11 @@ app.include_router(question.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 
 # Allow CORS for frontend
+origins = ["*"]  # Allow all origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://talktopdf.netloop.in/"],  # Adjust for frontend URL
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
