@@ -1,5 +1,7 @@
 
-
+![alt text](image-2.png)
+![alt text](image-1.png)
+![alt text](image.png)
 Here's a basic README for your PDF reader application project with FastAPI and React.js:
 
 ---

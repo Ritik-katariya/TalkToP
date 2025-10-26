@@ -1,49 +1,59 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from ..database import get_db
-from ..models import Document
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from ..database import get_document_store, DocumentStore
+from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain.chains.question_answering import load_qa_chain
+from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 import os
 from dotenv import load_dotenv
-import google.generativeai as genai
-from uuid import UUID
 
 load_dotenv()
-os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+os.getenv("OPENAI_API_KEY")
 router = APIRouter()
 
 class AskQuestionRequest(BaseModel):
-    document_id: UUID
+    document_id: str
     question: str
 
 @router.post("/ask")
-async def ask_question(request: AskQuestionRequest, db: Session = Depends(get_db)):
-    # Fetch the document
-    # document = db.query(Document).filter(Document.id == request.document_id).first()
-    # if not document:
-    #     return {"error": "Document not found"}
+async def ask_question(request: AskQuestionRequest, doc_store: DocumentStore = Depends(get_document_store)):
+    try:
+        # Check if OpenAI API key is configured
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key or api_key == "your_openai_api_key_here":
+            raise HTTPException(status_code=500, detail="OpenAI API key not configured. Please set OPENAI_API_KEY in .env file")
+        
+        # Fetch the document
+        document = doc_store.get_document(request.document_id)
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        answer = process_question(request.question)
+        return {"answer": {"output_text": answer}}
     
-    answer = process_question(request.question)
-    return {"answer": answer}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Question error: {str(e)}")  # Debug logging
+        raise HTTPException(status_code=500, detail=f"Question processing failed: {str(e)}")
 
 def process_question(user_question):
     # Load embeddings
     if not os.path.exists("faiss_index"):
         return "Vector database not found. Please upload a document first."
 
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    # Use OpenAI embeddings
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=os.getenv("OPENAI_API_KEY"))
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
 
-    # Initialize LLM Model
-    model = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.3)
+    # Create a retriever from the vector store
+    retriever = new_db.as_retriever()
 
-    
+    # Initialize LLM Model (from langchain_openai)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3, openai_api_key=os.getenv("OPENAI_API_KEY"))
+
     # Create QA Prompt
     prompt_template = """
     Answer the question as accurately as possible based on the provided context. If the answer is not found, say "Answer not available."
@@ -52,8 +62,15 @@ def process_question(user_question):
     Answer:
     """
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
-    # Get the response
-    response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+    # Build a RetrievalQA chain (inject prompt via chain_type_kwargs)
+    chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=retriever,
+        chain_type_kwargs={"prompt": prompt},
+    )
+
+    # Run the chain with the user question
+    response = chain.run(user_question)
     return response

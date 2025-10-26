@@ -1,8 +1,7 @@
 import axios from "axios";
 
-
 const api = axios.create({
-    baseURL: process.env.REACT_APP_BackendURL,
+    baseURL: "http://localhost:8000/api"
 });
 
 export const uploadPDF = async (file) => {
